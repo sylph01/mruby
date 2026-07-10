@@ -595,6 +595,11 @@ task_run_body(mrb_state *mrb, void *ud)
     /* Execute task using core logic */
     execute_task(mrb, t);
 
+    /* Platform servicing point — fires on every switch, so a compute-bound
+       task that keeps the ready queue full cannot starve it (idle_cpu only
+       runs when no task is ready). */
+    mrb_hal_task_switch_hook(mrb);
+
     /* Move to end of ready queue if still running (round-robin) */
     if (t->status == MRB_TASK_STATUS_READY) {
       task_change_state(mrb, t, MRB_TASK_STATUS_READY);
@@ -644,6 +649,9 @@ mrb_task_run_once(mrb_state *mrb)
 
   /* Execute task using core logic */
   execute_task(mrb, t);
+
+  /* Platform servicing point (see task_run_body) */
+  mrb_hal_task_switch_hook(mrb);
 
   /* Move to end of ready queue if still ready (round-robin) */
   if (t->status == MRB_TASK_STATUS_READY) {
